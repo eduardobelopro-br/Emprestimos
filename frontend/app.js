@@ -13,16 +13,16 @@ function setupForm() {
         e.preventDefault();
 
         const loanData = {
-            name: document.getElementById('name').value,
-            creditor: document.getElementById('creditor').value,
-            monthly_payment: parseFloat(document.getElementById('monthly_payment').value),
-            prepayment_value: parseFloat(document.getElementById('prepayment_value').value),
-            total_installments: parseInt(document.getElementById('total_installments').value),
-            remaining_installments: parseInt(document.getElementById('remaining_installments').value),
-            selic_rate: parseFloat(document.getElementById('selic_rate').value),
-            cdi_rate: parseFloat(document.getElementById('cdi_rate').value),
-            start_date: document.getElementById('start_date').value,
-            monthly_due_day: parseInt(document.getElementById('monthly_due_day').value)
+            descricao: document.getElementById('name').value,
+            instituicao_credora: document.getElementById('creditor').value,
+            valor_parcela: parseFloat(document.getElementById('monthly_payment').value),
+            valor_parcela_adiantada: parseFloat(document.getElementById('prepayment_value').value),
+            qtd_total_parcelas: parseInt(document.getElementById('total_installments').value),
+            qtd_parcelas_devidas: parseInt(document.getElementById('remaining_installments').value),
+            taxa_selic_registro: parseFloat(document.getElementById('selic_rate').value),
+            taxa_cdi_registro: parseFloat(document.getElementById('cdi_rate').value),
+            data_cadastro: document.getElementById('start_date').value,
+            dia_vencimento: parseInt(document.getElementById('monthly_due_day').value)
         };
 
         try {
@@ -68,9 +68,9 @@ function setupUpdateModal() {
 
         const loanId = document.getElementById('update_loan_id').value;
         const updateData = {
-            prepayment_value: parseFloat(document.getElementById('update_prepayment_value').value),
-            selic_rate: parseFloat(document.getElementById('update_selic_rate').value),
-            cdi_rate: parseFloat(document.getElementById('update_cdi_rate').value),
+            valor_parcela_adiantada: parseFloat(document.getElementById('update_prepayment_value').value),
+            taxa_selic_registro: parseFloat(document.getElementById('update_selic_rate').value),
+            taxa_cdi_registro: parseFloat(document.getElementById('update_cdi_rate').value),
             update_date: document.getElementById('update_date').value
         };
 
@@ -100,10 +100,10 @@ function setupUpdateModal() {
 function showUpdateModal(loan) {
     const modal = document.getElementById('update-modal');
     document.getElementById('update_loan_id').value = loan.id;
-    document.getElementById('update_loan_name').textContent = loan.name;
-    document.getElementById('update_prepayment_value').value = loan.prepayment_value;
-    document.getElementById('update_selic_rate').value = loan.selic_rate;
-    document.getElementById('update_cdi_rate').value = loan.cdi_rate;
+    document.getElementById('update_loan_name').textContent = loan.descricao;
+    document.getElementById('update_prepayment_value').value = loan.valor_parcela_adiantada;
+    document.getElementById('update_selic_rate').value = loan.taxa_selic_registro;
+    document.getElementById('update_cdi_rate').value = loan.taxa_cdi_registro;
 
     // Set today's date as default
     const today = new Date().toISOString().split('T')[0];
@@ -144,10 +144,10 @@ function renderTable(loans) {
         const recClass = loan.recommendation === 'Adiantar' ? 'recommendation-adiantar' : 'recommendation-investir';
 
         row.innerHTML = `
-            <td>${loan.name}</td>
-            <td>${loan.creditor}</td>
-            <td>${formatCurrency(loan.monthly_payment)}</td>
-            <td>${formatCurrency(loan.prepayment_value)}</td>
+            <td>${loan.descricao}</td>
+            <td>${loan.instituicao_credora}</td>
+            <td>${formatCurrency(loan.valor_parcela)}</td>
+            <td>${formatCurrency(loan.valor_parcela_adiantada)}</td>
             <td>${loan.discount_monthly_percent.toFixed(2)}%</td>
             <td>${loan.cdb_monthly_return.toFixed(2)}%</td>
             <td class="${recClass}">${loan.recommendation}</td>
@@ -163,7 +163,7 @@ let chartInstance = null;
 function renderChart(loans) {
     const ctx = document.getElementById('economyChart').getContext('2d');
 
-    const labels = loans.map(l => l.name);
+    const labels = loans.map(l => l.descricao);
     const data = loans.map(l => l.total_potential_economy);
 
     if (chartInstance) {

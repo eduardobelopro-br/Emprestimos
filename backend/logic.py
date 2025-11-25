@@ -1,18 +1,18 @@
-def calculate_monthly_discount_rate(monthly_payment: float, prepayment_value: float) -> float:
+def calculate_monthly_discount_rate(valor_parcela: float, valor_parcela_adiantada: float) -> float:
     """
-    Calculates the monthly discount percentage when prepaying a loan installment.
-    Formula: (Monthly Payment - Prepayment Value) / Prepayment Value * 100
+    Calculates the monthly discount percentage when prepaying.
+    Formula: (Normal Payment - Prepayment Value) / Prepayment Value * 100
     """
-    if prepayment_value <= 0:
-        return 0.0
-    return ((monthly_payment - prepayment_value) / prepayment_value) * 100
+    if valor_parcela_adiantada == 0:
+        return 0
+    return ((valor_parcela - valor_parcela_adiantada) / valor_parcela_adiantada) * 100
 
-def calculate_cdb_monthly_return(cdi_rate: float) -> float:
+def calculate_cdb_monthly_return(taxa_cdi: float) -> float:
     """
-    Calculates the approximate monthly return of a CDB paying 105% of CDI.
-    Formula: (CDI Rate * 1.05) / 12
+    Calculates the monthly return of investing in CDB at 105% of CDI.
+    Formula: (CDI * 1.05) / 12
     """
-    return (cdi_rate * 1.05) / 12
+    return (taxa_cdi * 1.05) / 12
 
 def get_recommendation(discount_rate: float, cdb_return: float) -> str:
     """
@@ -23,28 +23,28 @@ def get_recommendation(discount_rate: float, cdb_return: float) -> str:
     else:
         return "Investir"
 
-def calculate_remaining_installments(start_date, total_installments: int, monthly_due_day: int, current_date) -> int:
+def calculate_remaining_installments(data_cadastro, qtd_total_parcelas: int, dia_vencimento: int, current_date) -> int:
     """
     Calculate how many installments remain based on dates.
     
     Args:
-        start_date: datetime - when the loan started
-        total_installments: int - total number of installments
-        monthly_due_day: int - day of month payment is due (1-31)
+        data_cadastro: datetime - when the loan started
+        qtd_total_parcelas: int - total number of installments
+        dia_vencimento: int - day of month payment is due (1-31)
         current_date: datetime - current date for calculation
     
     Returns:
         int - number of remaining installments
     """
     # Calculate months elapsed
-    months_elapsed = (current_date.year - start_date.year) * 12 + (current_date.month - start_date.month)
+    months_elapsed = (current_date.year - data_cadastro.year) * 12 + (current_date.month - data_cadastro.month)
     
     # Adjust based on day of month
-    if current_date.day >= monthly_due_day:
+    if current_date.day >= dia_vencimento:
         months_elapsed += 1
     
     # Calculate remaining
-    remaining = total_installments - months_elapsed
+    remaining = qtd_total_parcelas - months_elapsed
     
     # Ensure we don't return negative values
     return max(0, remaining)

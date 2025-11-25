@@ -3,28 +3,27 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 
+# Database Setup
 DATABASE_URL = "sqlite:///./loans.db"
-
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
 Base = declarative_base()
 
-class Loan(Base):
-    __tablename__ = "loans"
+# Database Model - Tabela Emprestimos
+class Emprestimo(Base):
+    __tablename__ = "emprestimos"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True)
-    creditor = Column(String)
-    monthly_payment = Column(Float)
-    total_installments = Column(Integer)
-    remaining_installments = Column(Integer)
-    prepayment_value = Column(Float)
-    selic_rate = Column(Float)
-    cdi_rate = Column(Float)
-    start_date = Column(DateTime)  # When the loan started
-    monthly_due_day = Column(Integer)  # Day of month payment is due (1-31)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    descricao = Column(String, index=True)
+    instituicao_credora = Column(String)
+    valor_parcela = Column(Float)
+    qtd_total_parcelas = Column(Integer)
+    qtd_parcelas_devidas = Column(Integer)
+    valor_parcela_adiantada = Column(Float)
+    taxa_selic_registro = Column(Float)
+    taxa_cdi_registro = Column(Float)
+    data_cadastro = Column(String)  # ISO format YYYY-MM-DD
+    dia_vencimento = Column(Integer)
 
 def init_db():
     Base.metadata.create_all(bind=engine)
