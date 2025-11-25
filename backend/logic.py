@@ -9,10 +9,12 @@ def calculate_monthly_discount_rate(valor_parcela: float, valor_parcela_adiantad
 
 def calculate_cdb_monthly_return(taxa_cdi: float) -> float:
     """
-    Calculates the monthly return of investing in CDB at 105% of CDI.
-    Formula: (CDI * 1.05) / 12
+    Calculates the monthly return of investing in CDB at 105% of CDI (compound interest).
+    Formula: ((1 + (CDI * 1.05) / 100) ^ (1/12) - 1) * 100
     """
-    return (taxa_cdi * 1.05) / 12
+    taxa_anual_cdb = taxa_cdi * 1.05  # 105% do CDI
+    taxa_mensal_cdb = ((1 + taxa_anual_cdb / 100) ** (1/12) - 1) * 100
+    return taxa_mensal_cdb
 
 def get_recommendation(discount_rate: float, cdb_return: float) -> str:
     """
