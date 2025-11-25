@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Dívidas</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Gestão de Empréstimos</h1>
+            <div id="summary-stats">
+                <div class="stat-card">
+                    <h3>Economia Potencial Total</h3>
+                    <p id="total-economy">R$ 0,00</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Dívida Total Restante</h3>
+                    <p id="total-debt">R$ 0,00</p>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <section id="add-loan-section">
+                <h2>Cadastrar Novo Empréstimo</h2>
+                <form id="loan-form">
+                    <div class="form-group">
+                        <label for="name">Descrição / Nome</label>
+                        <input type="text" id="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="creditor">Instituição Credora</label>
+                        <input type="text" id="creditor" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="monthly_payment">Valor Parcela (R$)</label>
+                            <input type="number" step="0.01" id="monthly_payment" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="prepayment_value">Valor Adiantado (R$)</label>
+                            <input type="number" step="0.01" id="prepayment_value" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="total_installments">Total Parcelas</label>
+                            <input type="number" id="total_installments" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="remaining_installments">Parcelas Restantes</label>
+                            <input type="number" id="remaining_installments" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="selic_rate">Taxa SELIC (% a.a.)</label>
+                            <input type="number" step="0.01" id="selic_rate" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="cdi_rate">Taxa CDI (% a.a.)</label>
+                            <input type="number" step="0.01" id="cdi_rate" required>
+                        </div>
+                    </div>
+                    <button type="submit">Cadastrar Empréstimo</button>
+                </form>
+            </section>
+
+            <section id="charts-section">
+                <h2>Análise Visual</h2>
+                <canvas id="economyChart"></canvas>
+            </section>
+
+            <section id="loans-list-section">
+                <h2>Relatório de Recomendação</h2>
+                <div class="table-responsive">
+                    <table id="loans-table">
+                        <thead>
+                            <tr>
+                                <th>Descrição</th>
+                                <th>Credor</th>
+                                <th>Parcela</th>
+                                <th>Adiantada</th>
+                                <th>Desc. Mensal (%)</th>
+                                <th>CDB Mensal (%)</th>
+                                <th>Recomendação</th>
+                                <th>Economia Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Rows will be populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
