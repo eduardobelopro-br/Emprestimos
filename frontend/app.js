@@ -4,13 +4,14 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchLoans();
     fetchStats();
     setupForm();
+    setupUpdateModal();
 });
 
 function setupForm() {
     const form = document.getElementById('loan-form');
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        
+
         const loanData = {
             name: document.getElementById('name').value,
             creditor: document.getElementById('creditor').value,
@@ -19,7 +20,9 @@ function setupForm() {
             total_installments: parseInt(document.getElementById('total_installments').value),
             remaining_installments: parseInt(document.getElementById('remaining_installments').value),
             selic_rate: parseFloat(document.getElementById('selic_rate').value),
-            cdi_rate: parseFloat(document.getElementById('cdi_rate').value)
+            cdi_rate: parseFloat(document.getElementById('cdi_rate').value),
+            start_date: document.getElementById('start_date').value,
+            monthly_due_day: parseInt(document.getElementById('monthly_due_day').value)
         };
 
         try {
@@ -45,6 +48,70 @@ function setupForm() {
     });
 }
 
+function setupUpdateModal() {
+    const modal = document.getElementById('update-modal');
+    const closeBtn = document.querySelector('.close');
+    const updateForm = document.getElementById('update-form');
+
+    closeBtn.onclick = () => {
+        modal.style.display = 'none';
+    };
+
+    window.onclick = (event) => {
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+    };
+
+    updateForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const loanId = document.getElementById('update_loan_id').value;
+        const updateData = {
+            prepayment_value: parseFloat(document.getElementById('update_prepayment_value').value),
+            selic_rate: parseFloat(document.getElementById('update_selic_rate').value),
+            cdi_rate: parseFloat(document.getElementById('update_cdi_rate').value),
+            update_date: document.getElementById('update_date').value
+        };
+
+        try {
+            const response = await fetch(`${API_URL}/loans/${loanId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(updateData)
+            });
+
+            if (response.ok) {
+                console.log('Empréstimo atualizado com sucesso!');
+                modal.style.display = 'none';
+                await fetchLoans();
+                await fetchStats();
+            } else {
+                console.error('Erro ao atualizar empréstimo. Status:', response.status);
+            }
+        } catch (error) {
+            console.error('Erro de conexão:', error);
+        }
+    });
+}
+
+function showUpdateModal(loan) {
+    const modal = document.getElementById('update-modal');
+    document.getElementById('update_loan_id').value = loan.id;
+    document.getElementById('update_loan_name').textContent = loan.name;
+    document.getElementById('update_prepayment_value').value = loan.prepayment_value;
+    document.getElementById('update_selic_rate').value = loan.selic_rate;
+    document.getElementById('update_cdi_rate').value = loan.cdi_rate;
+
+    // Set today's date as default
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('update_date').value = today;
+
+    modal.style.display = 'block';
+}
+
 async function fetchLoans() {
     try {
         const response = await fetch(`${API_URL}/loans`);
@@ -60,7 +127,7 @@ async function fetchStats() {
     try {
         const response = await fetch(`${API_URL}/dashboard-stats`);
         const stats = await response.json();
-        
+
         document.getElementById('total-economy').textContent = formatCurrency(stats.total_potential_economy);
         document.getElementById('total-debt').textContent = formatCurrency(stats.total_outstanding_debt);
     } catch (error) {
@@ -75,7 +142,7 @@ function renderTable(loans) {
     loans.forEach(loan => {
         const row = document.createElement('tr');
         const recClass = loan.recommendation === 'Adiantar' ? 'recommendation-adiantar' : 'recommendation-investir';
-        
+
         row.innerHTML = `
             <td>${loan.name}</td>
             <td>${loan.creditor}</td>
@@ -85,6 +152,7 @@ function renderTable(loans) {
             <td>${loan.cdb_monthly_return.toFixed(2)}%</td>
             <td class="${recClass}">${loan.recommendation}</td>
             <td>${formatCurrency(loan.total_potential_economy)}</td>
+            <td><button class="action-btn" onclick='showUpdateModal(${JSON.stringify(loan)})'>Atualizar</button></td>
         `;
         tbody.appendChild(row);
     });
@@ -94,7 +162,7 @@ let chartInstance = null;
 
 function renderChart(loans) {
     const ctx = document.getElementById('economyChart').getContext('2d');
-    
+
     const labels = loans.map(l => l.name);
     const data = loans.map(l => l.total_potential_economy);
 

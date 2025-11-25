@@ -22,6 +22,8 @@ class Loan(Base):
     prepayment_value = Column(Float)
     selic_rate = Column(Float)
     cdi_rate = Column(Float)
+    start_date = Column(DateTime)  # When the loan started
+    monthly_due_day = Column(Integer)  # Day of month payment is due (1-31)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 def init_db():

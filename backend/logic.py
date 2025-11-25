@@ -22,3 +22,29 @@ def get_recommendation(discount_rate: float, cdb_return: float) -> str:
         return "Adiantar"
     else:
         return "Investir"
+
+def calculate_remaining_installments(start_date, total_installments: int, monthly_due_day: int, current_date) -> int:
+    """
+    Calculate how many installments remain based on dates.
+    
+    Args:
+        start_date: datetime - when the loan started
+        total_installments: int - total number of installments
+        monthly_due_day: int - day of month payment is due (1-31)
+        current_date: datetime - current date for calculation
+    
+    Returns:
+        int - number of remaining installments
+    """
+    # Calculate months elapsed
+    months_elapsed = (current_date.year - start_date.year) * 12 + (current_date.month - start_date.month)
+    
+    # Adjust based on day of month
+    if current_date.day >= monthly_due_day:
+        months_elapsed += 1
+    
+    # Calculate remaining
+    remaining = total_installments - months_elapsed
+    
+    # Ensure we don't return negative values
+    return max(0, remaining)

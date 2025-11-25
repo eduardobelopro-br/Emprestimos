@@ -5,7 +5,8 @@ from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
 from database import SessionLocal, engine, Loan, init_db
-from logic import calculate_monthly_discount_rate, calculate_cdb_monthly_return, get_recommendation
+from logic import calculate_monthly_discount_rate, calculate_cdb_monthly_return, get_recommendation, calculate_remaining_installments
+from datetime import datetime
 
 # Initialize Database
 init_db()
@@ -39,6 +40,14 @@ class LoanCreate(BaseModel):
     prepayment_value: float
     selic_rate: float
     cdi_rate: float
+    start_date: str  # ISO format date string
+    monthly_due_day: int
+
+class LoanUpdate(BaseModel):
+    prepayment_value: float
+    selic_rate: float
+    cdi_rate: float
+    update_date: str  # ISO format date string
 
 class LoanResponse(LoanCreate):
     id: int
@@ -124,4 +133,45 @@ def simulate_loan(loan: LoanCreate):
         "recommendation": recommendation,
         "total_potential_economy": total_economy,
         "payoff_amount": loan.prepayment_value * loan.remaining_installments # Simplified payoff
+    }
+
+@app.patch("/loans/{loan_id}", response_model=LoanResponse)
+def update_loan(loan_id: int, loan_update: LoanUpdate, db: Session = Depends(get_db)):
+    db_loan = db.query(Loan).filter(Loan.id == loan_id).first()
+    if not db_loan:
+        raise HTTPException(status_code=404, detail="Loan not found")
+    
+    # Parse update date
+    update_date = datetime.fromisoformat(loan_update.update_date.replace('Z', '+00:00'))
+    
+    # Calculate remaining installments based on dates
+    remaining = calculate_remaining_installments(
+        db_loan.start_date,
+        db_loan.total_installments,
+        db_loan.monthly_due_day,
+        update_date
+    )
+    
+    # Update fields
+    db_loan.prepayment_value = loan_update.prepayment_value
+    db_loan.selic_rate = loan_update.selic_rate
+    db_loan.cdi_rate = loan_update.cdi_rate
+    db_loan.remaining_installments = remaining
+    
+    db.commit()
+    db.refresh(db_loan)
+    
+    # Calculate computed fields for response
+    discount_rate = calculate_monthly_discount_rate(db_loan.monthly_payment, db_loan.prepayment_value)
+    cdb_return = calculate_cdb_monthly_return(db_loan.cdi_rate)
+    recommendation = get_recommendation(discount_rate, cdb_return)
+    discount_abs = db_loan.monthly_payment - db_loan.prepayment_value
+    total_economy = discount_abs * db_loan.remaining_installments
+    
+    return {
+        **db_loan.__dict__,
+        "discount_monthly_percent": discount_rate,
+        "cdb_monthly_return": cdb_return,
+        "recommendation": recommendation,
+        "total_potential_economy": total_economy
     }
