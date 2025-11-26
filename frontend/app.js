@@ -1,10 +1,15 @@
 const API_URL = 'http://localhost:8000';
 
+let evolutionChartInstance = null;
+
 document.addEventListener('DOMContentLoaded', () => {
     fetchLoans();
     fetchStats();
     setupForm();
     setupUpdateModal();
+    setupTrackingForm();
+    setupFetchRatesTrackingButton();
+    fetchEvolutionData();
 });
 
 function setupForm() {
@@ -112,14 +117,117 @@ function showUpdateModal(loan) {
     modal.style.display = 'block';
 }
 
+// Monthly Tracking Form Setup
+function setupTrackingForm() {
+    const form = document.getElementById('tracking-form');
+
+    // Set today as default date
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('tracking_date').value = today;
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const loanId = document.getElementById('tracking_loan').value;
+        const trackingData = {
+            data_registro: document.getElementById('tracking_date').value,
+            valor_parcela_adiantada: parseFloat(document.getElementById('tracking_value').value),
+            taxa_selic: parseFloat(document.getElementById('tracking_selic').value) || null,
+            taxa_cdi: parseFloat(document.getElementById('tracking_cdi').value) || null
+        };
+
+        try {
+            const response = await fetch(`${API_URL}/loans/${loanId}/historico`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(trackingData)
+            });
+
+            if (response.ok) {
+                console.log('Histórico registrado com sucesso!');
+                form.reset();
+                document.getElementById('tracking_date').value = today;
+                await fetchEvolutionData();
+                await populateLoanSelect();  // Refresh select
+            } else {
+                console.error('Erro ao registrar histórico. Status:', response.status);
+            }
+        } catch (error) {
+            console.error('Erro de conexão:', error);
+        }
+    });
+}
+
+function setupFetchRatesTrackingButton() {
+    const btn = document.getElementById('fetch-rates-tracking-btn');
+
+    btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        btn.textContent = '⏳ Buscando taxas...';
+
+        try {
+            const response = await fetch(`${API_URL}/taxas/atuais`);
+            const data = await response.json();
+
+            if (response.ok) {
+                if (data.selic !== null) {
+                    document.getElementById('tracking_selic').value = data.selic.toFixed(2);
+                }
+
+                if (data.cdi !== null) {
+                    document.getElementById('tracking_cdi').value = data.cdi.toFixed(2);
+                }
+
+                btn.textContent = '✅ Taxas atualizadas!';
+                setTimeout(() => {
+                    btn.textContent = '📊 Buscar Taxas Atuais (BACEN)';
+                    btn.disabled = false;
+                }, 2000);
+            } else {
+                throw new Error('Erro ao buscar taxas');
+            }
+        } catch (error) {
+            console.error('Erro ao buscar taxas do BACEN:', error);
+            btn.textContent = '❌ Erro ao buscar';
+            setTimeout(() => {
+                btn.textContent = '📊 Buscar Taxas Atuais (BACEN)';
+                btn.disabled = false;
+            }, 3000);
+        }
+    });
+}
+
 async function fetchLoans() {
     try {
         const response = await fetch(`${API_URL}/loans`);
         const loans = await response.json();
         renderTable(loans);
         renderChart(loans);
+        await populateLoanSelect();
     } catch (error) {
         console.error('Error fetching loans:', error);
+    }
+}
+
+async function populateLoanSelect() {
+    try {
+        const response = await fetch(`${API_URL}/loans`);
+        const loans = await response.json();
+        const select = document.getElementById('tracking_loan');
+
+        // Clear existing options except first one
+        select.innerHTML = '<option value="">Selecione um empréstimo</option>';
+
+        loans.forEach(loan => {
+            const option = document.createElement('option');
+            option.value = loan.id;
+            option.textContent = loan.descricao;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error populating loan select:', error);
     }
 }
 
@@ -194,6 +302,190 @@ function renderChart(loans) {
     });
 }
 
+// Evolution Chart - Multi-line chart for historical values
+async function fetchEvolutionData() {
+    try {
+        const response = await fetch(`${API_URL}/historico/all`);
+        const data = await response.json();
+        renderEvolutionChart(data);
+    } catch (error) {
+        console.error('Error fetching evolution data:', error);
+    }
+}
+
+function renderEvolutionChart(evolutionData) {
+    const ctx = document.getElementById('evolutionChart').getContext('2d');
+
+    if (evolutionChartInstance) {
+        evolutionChartInstance.destroy();
+    }
+
+    // Generate a unique color for each loan
+    const colors = [
+        '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316',
+        '#eab308', '#84cc16', '#10b981', '#14b8a6', '#06b6d4'
+    ];
+
+    const datasets = evolutionData.map((emprestimo, index) => {
+        const color = colors[index % colors.length];
+        return {
+            label: emprestimo.emprestimo_nome,
+            data: emprestimo.historicos.map(h => ({
+                x: h.data_registro,
+                y: h.valor_parcela_adiantada
+            })),
+            borderColor: color,
+            backgroundColor: color + '20',
+            tension: 0.3,
+            fill: false,
+            pointRadius: 5,
+            pointHoverRadius: 7
+        };
+    });
+
+    evolutionChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            scales: {
+                x: {
+                    type: 'time',
+                    time: {
+                        unit: 'month',
+                        displayFormats: {
+                            month: 'MMM yyyy'
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Data'
+                    },
+                    ticks: {
+                        color: '#94a3b8'
+                    },
+                    grid: {
+                        color: 'rgba(51, 65, 85, 0.3)'
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Valor Adiantado (R$)'
+                    },
+                    ticks: {
+                        color: '#94a3b8',
+                        callback: function (value) {
+                            return 'R$ ' + value.toFixed(2);
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(51, 65, 85, 0.3)'
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        color: '#e2e8f0',
+                        padding: 15,
+                        font: {
+                            size: 12
+                        }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: '#1e293b',
+                    titleColor: '#e2e8f0',
+                    bodyColor: '#e2e8f0',
+                    borderColor: '#334155',
+                    borderWidth: 1,
+                    padding: 12,
+                    callbacks: {
+                        label: function (context) {
+                            return context.dataset.label + ': R$ ' + context.parsed.y.toFixed(2);
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
 function formatCurrency(value) {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+}
+
+// Excel Export/Import Functions
+async function exportToExcel() {
+    try {
+        const response = await fetch(`${API_URL}/export/excel`);
+
+        if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'emprestimos_backup.xlsx';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            console.log('✅ Dados exportados com sucesso!');
+            alert('✅ Dados exportados com sucesso!');
+        } else {
+            throw new Error('Erro ao exportar dados');
+        }
+    } catch (error) {
+        console.error('Erro ao exportar para Excel:', error);
+        alert('❌ Erro ao exportar dados para Excel');
+    }
+}
+
+async function importFromExcel(file) {
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch(`${API_URL}/import/excel`, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            console.log('✅ Dados importados com sucesso!', result);
+            alert(`✅ Dados importados com sucesso!\n\nEmpréstimos: ${result.loans_imported}\nHistórico: ${result.history_imported}`);
+
+            // Recarregar dados
+            await fetchLoans();
+            await fetchStats();
+            await fetchEvolutionData();
+        } else {
+            throw new Error('Erro ao importar dados');
+        }
+    } catch (error) {
+        console.error('Erro ao importar do Excel:', error);
+        alert('❌ Erro ao importar dados do Excel');
+    }
+}
+
+function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (file) {
+        importFromExcel(file);
+        // Limpar o input para permitir selecionar o mesmo arquivo novamente
+        event.target.value = '';
+    }
 }
