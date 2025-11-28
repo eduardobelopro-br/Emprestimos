@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:8000';
+const API_URL = '';
 
 let evolutionChartInstance = null;
 
@@ -9,11 +9,56 @@ document.addEventListener('DOMContentLoaded', () => {
     setupUpdateModal();
     setupTrackingForm();
     setupFetchRatesTrackingButton();
+    setupFetchRatesButton(); // New button for main form
     fetchEvolutionData();
 });
 
+function setupFetchRatesButton() {
+    const btn = document.getElementById('fetch-rates-btn');
+    if (!btn) return;
+
+    btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        const originalText = btn.textContent;
+        btn.textContent = '⏳ Buscando...';
+
+        try {
+            const response = await fetch(`${API_URL}/taxas/atuais`);
+            const data = await response.json();
+
+            if (response.ok) {
+                if (data.selic !== null) {
+                    document.getElementById('selic_rate').value = data.selic.toFixed(2);
+                }
+
+                if (data.cdi !== null) {
+                    document.getElementById('cdi_rate').value = data.cdi.toFixed(2);
+                }
+
+                btn.textContent = '✅ Atualizado!';
+                // alert('Taxas atualizadas com sucesso!\nSELIC: ' + data.selic + '%\nCDI: ' + data.cdi + '%');
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }, 2000);
+            } else {
+                throw new Error('Erro ao buscar taxas');
+            }
+        } catch (error) {
+            console.error('Erro ao buscar taxas do BACEN:', error);
+            alert('Erro ao buscar taxas: ' + error.message);
+            btn.textContent = '❌ Erro';
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }, 3000);
+        }
+    });
+}
+
 function setupForm() {
     const form = document.getElementById('loan-form');
+    if (!form) return;
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
@@ -58,9 +103,13 @@ function setupUpdateModal() {
     const closeBtn = document.querySelector('.close');
     const updateForm = document.getElementById('update-form');
 
-    closeBtn.onclick = () => {
-        modal.style.display = 'none';
-    };
+    if (!modal || !updateForm) return;
+
+    if (closeBtn) {
+        closeBtn.onclick = () => {
+            modal.style.display = 'none';
+        };
+    }
 
     window.onclick = (event) => {
         if (event.target === modal) {
@@ -104,6 +153,8 @@ function setupUpdateModal() {
 
 function showUpdateModal(loan) {
     const modal = document.getElementById('update-modal');
+    if (!modal) return;
+
     document.getElementById('update_loan_id').value = loan.id;
     document.getElementById('update_loan_name').textContent = loan.descricao;
     document.getElementById('update_prepayment_value').value = loan.valor_parcela_adiantada;
@@ -120,10 +171,12 @@ function showUpdateModal(loan) {
 // Monthly Tracking Form Setup
 function setupTrackingForm() {
     const form = document.getElementById('tracking-form');
+    if (!form) return;
 
     // Set today as default date
     const today = new Date().toISOString().split('T')[0];
-    document.getElementById('tracking_date').value = today;
+    const dateInput = document.getElementById('tracking_date');
+    if (dateInput) dateInput.value = today;
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -148,7 +201,7 @@ function setupTrackingForm() {
             if (response.ok) {
                 console.log('Histórico registrado com sucesso!');
                 form.reset();
-                document.getElementById('tracking_date').value = today;
+                if (dateInput) dateInput.value = today;
                 await fetchEvolutionData();
                 await populateLoanSelect();  // Refresh select
             } else {
@@ -162,6 +215,7 @@ function setupTrackingForm() {
 
 function setupFetchRatesTrackingButton() {
     const btn = document.getElementById('fetch-rates-tracking-btn');
+    if (!btn) return;
 
     btn.addEventListener('click', async () => {
         btn.disabled = true;
@@ -204,7 +258,6 @@ async function fetchLoans() {
         const response = await fetch(`${API_URL}/loans`);
         const loans = await response.json();
         renderTable(loans);
-        renderChart(loans);
         await populateLoanSelect();
     } catch (error) {
         console.error('Error fetching loans:', error);
@@ -216,6 +269,7 @@ async function populateLoanSelect() {
         const response = await fetch(`${API_URL}/loans`);
         const loans = await response.json();
         const select = document.getElementById('tracking_loan');
+        if (!select) return;
 
         // Clear existing options except first one
         select.innerHTML = '<option value="">Selecione um empréstimo</option>';
@@ -266,41 +320,9 @@ function renderTable(loans) {
     });
 }
 
-let chartInstance = null;
 
-function renderChart(loans) {
-    const ctx = document.getElementById('economyChart').getContext('2d');
 
-    const labels = loans.map(l => l.descricao);
-    const data = loans.map(l => l.total_potential_economy);
 
-    if (chartInstance) {
-        chartInstance.destroy();
-    }
-
-    chartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Economia Potencial Total (R$)',
-                data: data,
-                backgroundColor: 'rgba(39, 174, 96, 0.6)',
-                borderColor: 'rgba(39, 174, 96, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
-        }
-    });
-}
 
 // Evolution Chart - Multi-line chart for historical values
 async function fetchEvolutionData() {

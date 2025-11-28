@@ -66,6 +66,10 @@
                             <label for="cdi_rate">Taxa CDI (% a.a.)</label>
                             <input type="number" step="0.01" id="cdi_rate" required>
                         </div>
+                        <div class="form-group" style="display: flex; align-items: flex-end;">
+                            <button type="button" id="fetch-rates-btn" style="margin-bottom: 0; height: 42px;">📊 Buscar
+                                Taxas (BACEN)</button>
+                        </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
@@ -79,11 +83,6 @@
                     </div>
                     <button type="submit">Cadastrar Empréstimo</button>
                 </form>
-            </section>
-
-            <section id="charts-section">
-                <h2>Análise Visual</h2>
-                <canvas id="economyChart"></canvas>
             </section>
 
             <section id="loans-list-section">
@@ -143,7 +142,7 @@
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=4"></script>
 </body>
 
 </html>

@@ -12,6 +12,9 @@ from excel_handler import export_loans_to_excel, import_loans_from_excel, auto_s
 from datetime import datetime
 import os
 
+from fastapi.staticfiles import StaticFiles
+import os
+
 # Initialize Database
 init_db()
 
@@ -25,6 +28,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
 
 # Dependency
 def get_db():
@@ -342,3 +347,7 @@ async def import_from_excel(file: UploadFile = File(...), db: Session = Depends(
             os.remove(temp_file_path)
         raise HTTPException(status_code=500, detail=f"Erro ao importar do Excel: {str(e)}")
 
+
+# Mount Frontend at Root (Must be last to avoid shadowing API routes)
+frontend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))
+app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
